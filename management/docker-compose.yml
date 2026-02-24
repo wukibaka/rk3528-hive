@@ -23,11 +23,14 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-%(protocol)s://%(domain)s:%(http_port)s/grafana/}
+      # 子路径反代必须写死完整 URL，且不要末尾斜杠（与 Grafana 文档一致）
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-https://example.com/grafana}
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - grafana_data:/var/lib/grafana
