@@ -4,6 +4,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+ARMBIAN_DIR="${ROOT_DIR}/armbian-build/build"
 
 # 加载环境变量
 if [ -f "${ROOT_DIR}/.env" ]; then
@@ -15,18 +16,29 @@ else
     exit 1
 fi
 
+# 检查 Armbian 框架是否已 clone
+if [ ! -f "${ARMBIAN_DIR}/compile.sh" ]; then
+    echo "ERROR: Armbian framework not found at ${ARMBIAN_DIR}."
+    echo "Run: ./scripts/setup-armbian.sh"
+    exit 1
+fi
+
+# 将 userpatches/ 同步到 Armbian build 目录
+# Armbian 以 compile.sh 所在目录为根查找 userpatches/
+echo ">>> Syncing userpatches to Armbian build dir..."
+rsync -a --delete "${ROOT_DIR}/armbian-build/userpatches/" "${ARMBIAN_DIR}/userpatches/"
+
 # 渲染配置模板（用 envsubst 替换占位符）
 echo ">>> Rendering config templates..."
 envsubst < "${ROOT_DIR}/configs/frp/frpc.toml.tpl" \
-    > "${ROOT_DIR}/armbian-build/userpatches/overlay/etc/frp/frpc.toml"
+    > "${ARMBIAN_DIR}/userpatches/overlay/etc/frp/frpc.toml"
 
-# mihomo 和 xray 配置通常由首次启动脚本从服务器拉取，此处仅复制默认模板
 cp "${ROOT_DIR}/configs/mihomo/config.yaml.tpl" \
-    "${ROOT_DIR}/armbian-build/userpatches/overlay/etc/mihomo/config.yaml"
+    "${ARMBIAN_DIR}/userpatches/overlay/etc/mihomo/config.yaml"
 
 # 执行 Armbian 构建
 echo ">>> Starting Armbian build..."
-cd "${ROOT_DIR}/armbian-build"
+cd "${ARMBIAN_DIR}"
 
 ./compile.sh build \
     BOARD="${BOARD:-nanopi-zero2}" \
