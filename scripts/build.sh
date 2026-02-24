@@ -28,12 +28,11 @@ cp "${ROOT_DIR}/configs/mihomo/config.yaml.tpl" \
 echo ">>> Starting Armbian build..."
 cd "${ROOT_DIR}/armbian-build"
 
-./compile.sh \
-    BOARD="${BOARD:-nanopi-r2s}" \
-    BRANCH="${BRANCH:-legacy}" \
-    RELEASE="${RELEASE:-bookworm}" \
-    BUILD_MINIMAL=yes \
-    BUILD_DESKTOP=no \
-    KERNEL_CONFIGURE=no \
+./compile.sh build \
+    BOARD="${BOARD:-nanopi-zero2}" \
+    BRANCH="${BRANCH:-vendor}" \
+    RELEASE="${RELEASE:-trixie}" \
+    BUILD_MINIMAL=no \
+    KERNEL_CONFIGURE="${KERNEL_CONFIGURE:-no}" \
     COMPRESS_OUTPUTIMAGE=yes \
     "$@"

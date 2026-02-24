@@ -5,10 +5,10 @@
 *.pem
 *.p12
 
-# Armbian 构建产物（体积巨大）
-armbian-build/output/
-armbian-build/cache/
-armbian-build/.tmp/
+# Armbian 框架本体（由 scripts/setup-armbian.sh clone，不入库）
+# 仅追踪 armbian-build/userpatches/ 下的自定义文件
+armbian-build/*
+!armbian-build/userpatches/
 
 # 渲染后的实际配置（含密钥，由模板生成）
 armbian-build/userpatches/overlay/etc/mihomo/config.yaml
