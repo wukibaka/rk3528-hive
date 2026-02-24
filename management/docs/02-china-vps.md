@@ -230,7 +230,7 @@ EOF
 cat > /opt/rk3528-edge/ansible/inventory/tailscale.yaml << 'EOF'
 plugin: community.general.tailscale
 filters:
-  - "tag:edge-node"
+  - "tag:hive"
 EOF
 ```
 

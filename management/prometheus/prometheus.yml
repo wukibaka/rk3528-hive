@@ -4,7 +4,7 @@ global:
 
 scrape_configs:
   # 边缘节点（通过 Tailscale IP 抓取，Node Registry cron 更新此文件）
-  - job_name: 'edge-nodes'
+  - job_name: 'hives'
     file_sd_configs:
       - files:
           - '/etc/prometheus/targets/nodes.json'

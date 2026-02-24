@@ -142,7 +142,7 @@ tailscale up \
   --authkey="${TAILSCALE_AUTHKEY}" \
   --hostname="edge-${MAC6}" \
   --accept-dns=false \
-  --advertise-tags=tag:edge-node
+  --advertise-tags=tag:hive
 ```
 
 加入后即可通过 Tailscale IP（100.x.x.x）进行 SSH 和 Prometheus 抓取。
@@ -237,7 +237,7 @@ systemctl enable --now frpc
 tailscale up --authkey="${TAILSCALE_AUTHKEY}" \
   --hostname="edge-${MAC6}" \
   --accept-dns=false \
-  --advertise-tags=tag:edge-node
+  --advertise-tags=tag:hive
 
 # --- 6. 上报到 Node Registry ---
 TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "pending")
@@ -288,7 +288,7 @@ systemctl disable provision-node
 ```yaml
 # prometheus.yml
 scrape_configs:
-  - job_name: 'edge-nodes'
+  - job_name: 'hives'
     file_sd_configs:
       - files: ['/etc/prometheus/nodes.json']  # Node Registry 定期更新此文件
     scheme: http
@@ -305,7 +305,7 @@ Node Registry 提供 `GET /api/prometheus-targets` → 输出 Prometheus file_sd
 # ansible/inventory/tailscale.yaml
 plugin: community.general.tailscale
 tags:
-  - tag:edge-node
+  - tag:hive
 ```
 
 ```bash

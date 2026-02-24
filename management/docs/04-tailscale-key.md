@@ -18,7 +18,7 @@
 | Expiration | 90天 或 不过期 | 选不过期方便批量部署 |
 | Ephemeral | ❌ 关闭 | 开启后设备离线会被删除，监控会丢失数据 |
 | Pre-authorized | ✅ 开启 | 设备加入无需手动审批 |
-| Tags | `tag:edge-node` | 用于 Ansible 动态 inventory 分组 |
+| Tags | `tag:hive` | 用于 Ansible 动态 inventory 分组 |
 
 5. 点击 **Generate key**，复制结果（以 `tskey-auth-` 开头）
 
@@ -31,18 +31,18 @@
 ```json
 {
   "tagOwners": {
-    "tag:edge-node": ["autogroup:admin"]
+    "tag:hive": ["autogroup:admin"]
   },
   "acls": [
     {
       "action": "accept",
       "src": ["autogroup:admin"],
-      "dst": ["tag:edge-node:22"]
+      "dst": ["tag:hive:22"]
     },
     {
       "action": "accept",
       "src": ["autogroup:admin"],
-      "dst": ["tag:edge-node:9100"]
+      "dst": ["tag:hive:9100"]
     }
   ]
 }

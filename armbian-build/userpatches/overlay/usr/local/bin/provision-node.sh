@@ -167,7 +167,7 @@ echo ">>> Joining Tailscale..."
 systemctl enable --now tailscaled
 sleep 2
 tailscale up \
-    --authkey="${TAILSCALE_AUTHKEY}" \
+    --authkey="${TAILSCALE_OAUTH_SECRET}" \
     --hostname="${HOSTNAME}" \
     --accept-dns=false \
     --advertise-tags=tag:edge-node \
