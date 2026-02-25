@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: 'edge-hive'
+  - name: 'hive'
     orgId: 1
-    folder: 'Edge Hive'
+    folder: 'Hive'
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

@@ -147,9 +147,9 @@ cp "${ROOT_DIR}/linux-rk35xx-vendor-optimized.config" \
 # 渲染配置模板
 echo "渲染配置模板..."
 
-# /etc/edge/config.env — 所有共享凭证烧入镜像
-envsubst < "${ROOT_DIR}/configs/edge/config.env.tpl" \
-    > "${ARMBIAN_DIR}/userpatches/overlay/etc/edge/config.env"
+# /etc/hive/config.env — 所有共享凭证烧入镜像
+envsubst < "${ROOT_DIR}/configs/hive/config.env.tpl" \
+    > "${ARMBIAN_DIR}/userpatches/overlay/etc/hive/config.env"
 
 # /etc/frp/frpc.toml — 服务端信息在构建时渲染
 envsubst < "${ROOT_DIR}/configs/frp/frpc.toml.tpl" \

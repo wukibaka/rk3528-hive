@@ -1,11 +1,11 @@
 #!/bin/bash
 #
-# Edge Node Services Status Display
-# Custom MOTD script for Hive Edge Node
+# Hive Network Services Status Display
+# Custom MOTD script for Hive Network Node
 
 set -e
 
-THIS_SCRIPT="edge-services"
+THIS_SCRIPT="hive-services"
 MOTD_DISABLE=""
 
 safe_source() { [[ -f "$1" ]] && . "$1"; }
@@ -16,11 +16,11 @@ for f in ${MOTD_DISABLE}; do
     [[ "${f}" == "${THIS_SCRIPT}" ]] && exit 0
 done
 
-# Load edge node configuration
-safe_source /etc/edge/config.env
+# Load hive node configuration
+safe_source /etc/hive/config.env
 
 echo ""
-printf "\e[0;90m Edge Services: \x1B[0m\n"
+printf "\e[0;90m Hive Services: \x1B[0m\n"
 echo ""
 
 # Function to check service status
@@ -114,9 +114,9 @@ if [[ -n "$(ip link show | grep -E '^[0-9]+: (eth|en|wl)' | head -1)" ]]; then
         printf "\e[0;90m Node Identity: \x1B[0m\n"
         echo ""
         printf " \e[1;36m%-18s\e[0m: \e[0;94m%s\e[0m\n" "MAC Address" "$MAC_ADDR"
-        printf " \e[1;36m%-18s\e[0m: \e[0;94medge-%s\e[0m\n" "Node ID" "$MAC6"
+        printf " \e[1;36m%-18s\e[0m: \e[0;94mhive-%s\e[0m\n" "Node ID" "$MAC6"
         if [[ -n "${CF_DOMAIN}" ]]; then
-            printf " \e[1;36m%-18s\e[0m: \e[0;94medge-%s.%s\e[0m\n" "Public Domain" "$MAC6" "$CF_DOMAIN"
+            printf " \e[1;36m%-18s\e[0m: \e[0;94mhive-%s.%s\e[0m\n" "Public Domain" "$MAC6" "$CF_DOMAIN"
         fi
     fi
 fi

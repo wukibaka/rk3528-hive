@@ -3,8 +3,8 @@
 # 安装：Docker、Ansible、部署 Prometheus+Grafana
 #
 # 在 VPS 上执行：
-#   git clone <your-repo> /opt/edge-management
-#   cd /opt/edge-management
+#   git clone <your-repo> /opt/hive-management
+#   cd /opt/hive-management
 #   cp .env.example .env && nano .env    # 填入 TAILSCALE_OAUTH_SECRET、GRAFANA_PASSWORD
 #   bash management/setup-vps.sh
 
@@ -12,7 +12,7 @@ set -e
 cd "$(dirname "$0")/.."
 ROOT_DIR="$(pwd)"
 
-echo "=== Edge Hive Management Setup ==="
+echo "=== Hive Management Setup ==="
 
 # ─────────────────────────────────────────────
 # 1. 安装 Docker

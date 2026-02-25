@@ -5,7 +5,7 @@
 **目标**：将一张编译好的 IMG 写到 100 张 SD 卡，设备上电后自动成为可用的 v2ray 代理节点，无需逐台手工配置。
 
 **确认决策**：
-- CF Tunnel：有自有域名托管在 CF（节点 URL 为 `edge-<mac6>.yourdomain.com`）
+- CF Tunnel：有自有域名托管在 CF（节点 URL 为 `hive-<mac6>.yourdomain.com`）
 - 设备 ID：MAC 末 6 位（完全自动，零操作）
 - xray UUID：每台独立生成（一台泄露不影响其他节点）
 - 管理服务器：已有在运行的公网 VPS
@@ -46,19 +46,19 @@
 
 | 内容 | 文件位置 |
 |------|----------|
-| CF Account API Token | `/etc/edge/config.env` |
-| CF Zone ID + 你的域名 | `/etc/edge/config.env` |
-| Tailscale Auth Key（Reusable，非 Ephemeral） | `/etc/edge/config.env` |
-| EasyTier 网络名 + 密钥 | `/etc/edge/config.env` |
+| CF Account API Token | `/etc/hive/config.env` |
+| CF Zone ID + 你的域名 | `/etc/hive/config.env` |
+| Tailscale Auth Key（Reusable，非 Ephemeral） | `/etc/hive/config.env` |
+| EasyTier 网络名 + 密钥 | `/etc/hive/config.env` |
 | FRP 服务端地址 + Token | `/etc/frp/frpc.toml.tpl` |
-| Node Registry 上报地址 | `/etc/edge/config.env` |
+| Node Registry 上报地址 | `/etc/hive/config.env` |
 | xray 配置模板（含 WS path，占位 UUID） | `/etc/xray/config.json` |
 
 ### 首次启动自动生成（每台唯一）
 
 | 内容 | 生成方式 |
 |------|----------|
-| 主机名 `edge-<mac6>` | eth0 MAC 末 6 位 |
+| 主机名 `hive-<mac6>` | eth0 MAC 末 6 位 |
 | Machine-ID | `systemd-machine-id-setup` |
 | SSH Host Keys | `ssh-keygen -A` |
 | xray UUID | `uuidgen` |
@@ -115,24 +115,24 @@ LimitNOFILE=65535
 首次启动脚本执行：
 ```bash
 # 1. 使用 API Token 创建 tunnel
-cloudflared tunnel create "edge-${MAC6}"
+cloudflared tunnel create "hive-${MAC6}"
 # → 生成 ~/.cloudflared/<tunnel-uuid>.json
 
 # 2. 创建 DNS 记录（CNAME → tunnel.cfargotunnel.com）
-cloudflared tunnel route dns "edge-${MAC6}" "edge-${MAC6}.yourdomain.com"
+cloudflared tunnel route dns "hive-${MAC6}" "hive-${MAC6}.yourdomain.com"
 
 # 3. 生成 tunnel 运行配置
 cat > /etc/cloudflared/config.yml << EOF
-tunnel: edge-${MAC6}
+tunnel: hive-${MAC6}
 credentials-file: /root/.cloudflared/${TUNNEL_UUID}.json
 ingress:
-  - hostname: edge-${MAC6}.yourdomain.com
+  - hostname: hive-${MAC6}.yourdomain.com
     service: http://127.0.0.1:8080
   - service: http_status:404
 EOF
 ```
 
-用户连接地址：`wss://edge-<mac6>.yourdomain.com/ray`
+用户连接地址：`wss://hive-<mac6>.yourdomain.com/ray`
 
 ### 3.3 Tailscale
 
@@ -140,7 +140,7 @@ EOF
 # 首次启动时执行（使用嵌入的 OAuth Client Secret）
 tailscale up \
   --authkey="${TAILSCALE_OAUTH_SECRET}" \
-  --hostname="edge-${MAC6}" \
+  --hostname="hive-${MAC6}" \
   --accept-dns=false \
   --advertise-tags=tag:hive
 ```
@@ -154,7 +154,7 @@ easytier-core \
   --network-name "${EASYTIER_NETWORK_NAME}" \
   --network-secret "${EASYTIER_SECRET}" \
   --peers tcp://${EASYTIER_RELAY}:11010 \
-  --hostname "edge-${MAC6}"
+  --hostname "hive-${MAC6}"
 ```
 
 ### 3.5 FRP 客户端
@@ -166,7 +166,7 @@ serverPort = 7000
 auth.token = "${FRP_TOKEN}"
 
 [[proxies]]
-name = "ssh-edge-${MAC6}"
+name = "ssh-hive-${MAC6}"
 type = "tcp"
 localPort = 22
 remotePort = ${FRP_PORT}   # MAC md5 哈希计算
@@ -187,16 +187,16 @@ remotePort = ${FRP_PORT}   # MAC md5 哈希计算
 # 仅执行一次，完成后自我禁用
 
 set -e
-DONE_MARKER="/etc/edge/provisioned"
+DONE_MARKER="/etc/hive/provisioned"
 [ -f "$DONE_MARKER" ] && exit 0
 
-source /etc/edge/config.env
+source /etc/hive/config.env
 
 # --- 1. 基础标识 ---
 IFACE=$(ip -o link show | awk '$2 != "lo:" {print $2}' | head -1 | tr -d ':')
 MAC=$(cat /sys/class/net/${IFACE}/address | tr -d ':')
 MAC6="${MAC: -6}"
-HOSTNAME="edge-${MAC6}"
+HOSTNAME="hive-${MAC6}"
 
 hostnamectl set-hostname "$HOSTNAME"
 echo "127.0.1.1 $HOSTNAME" >> /etc/hosts
@@ -215,16 +215,16 @@ sed -i "s/\${MAC6}/${MAC6}/g" /etc/frp/frpc.toml
 
 # --- 4. Cloudflare Tunnel ---
 export CLOUDFLARE_API_TOKEN="${CF_API_TOKEN}"
-cloudflared tunnel create "edge-${MAC6}"
+cloudflared tunnel create "hive-${MAC6}"
 TUNNEL_UUID=$(cloudflared tunnel list --output json | \
-  jq -r ".[] | select(.name==\"edge-${MAC6}\") | .id")
-cloudflared tunnel route dns "edge-${MAC6}" "edge-${MAC6}.${CF_DOMAIN}"
+  jq -r ".[] | select(.name==\"hive-${MAC6}\") | .id")
+cloudflared tunnel route dns "hive-${MAC6}" "hive-${MAC6}.${CF_DOMAIN}"
 
 cat > /etc/cloudflared/config.yml << EOF
-tunnel: edge-${MAC6}
+tunnel: hive-${MAC6}
 credentials-file: /root/.cloudflared/${TUNNEL_UUID}.json
 ingress:
-  - hostname: edge-${MAC6}.${CF_DOMAIN}
+  - hostname: hive-${MAC6}.${CF_DOMAIN}
     service: http://127.0.0.1:8080
   - service: http_status:404
 EOF
@@ -235,7 +235,7 @@ systemctl enable --now cloudflared
 systemctl enable --now easytier
 systemctl enable --now frpc
 tailscale up --authkey="${TAILSCALE_OAUTH_SECRET}" \
-  --hostname="edge-${MAC6}" \
+  --hostname="hive-${MAC6}" \
   --accept-dns=false \
   --advertise-tags=tag:hive
 
@@ -247,14 +247,14 @@ curl -sf -X POST "${NODE_REGISTRY_URL}/api/nodes/register" \
     \"mac\": \"${MAC}\",
     \"mac6\": \"${MAC6}\",
     \"hostname\": \"${HOSTNAME}\",
-    \"cf_url\": \"edge-${MAC6}.${CF_DOMAIN}\",
+    \"cf_url\": \"hive-${MAC6}.${CF_DOMAIN}\",
     \"tailscale_ip\": \"${TAILSCALE_IP}\",
     \"xray_uuid\": \"${UUID}\",
     \"frp_port\": ${FRP_PORT}
   }" || true   # 不因注册失败而中止
 
 # --- 7. 完成 ---
-mkdir -p /etc/edge
+mkdir -p /etc/hive
 touch "$DONE_MARKER"
 systemctl disable provision-node
 ```
@@ -275,7 +275,7 @@ systemctl disable provision-node
 ```
 ┌──────────────────────┐
 │  NODE  a4b2c1        │
-│  edge-a4b2c1.xxx.com │
+│  hive-a4b2c1.xxx.com │
 │  日本 JP / #042      │
 │  [QR Code]           │
 └──────────────────────┘
@@ -313,7 +313,7 @@ tags:
 ansible-playbook -i inventory/tailscale.yaml playbooks/update-xray.yml
 
 # 批量查看 xray 状态
-ansible -i inventory/tailscale.yaml tag_edge_node \
+ansible -i inventory/tailscale.yaml tag_hive \
   -m command -a "systemctl status xray --no-pager"
 ```
 
@@ -322,7 +322,7 @@ ansible -i inventory/tailscale.yaml tag_edge_node \
 ## 六、设备标识说明
 
 **设备 ID**：MAC 末 6 位（如 `a4b2c1`）
-**访问地址**：`edge-a4b2c1.yourdomain.com`
+**访问地址**：`hive-a4b2c1.yourdomain.com`
 **管理 IP**：Tailscale 分配的 `100.x.x.x`
 
 贴在外壳上的内容：MAC 末 6 位 + QR 码（扫码跳转管理页面）。
@@ -371,7 +371,7 @@ QR 码生成由 Node Registry 的 `/api/labels` 页面完成，打印即用。
 
 ### 新建（镜像内，via overlay）
 - `armbian-build/userpatches/overlay/usr/local/bin/provision-node.sh`
-- `armbian-build/userpatches/overlay/etc/edge/config.env.tpl`（嵌入所有共享凭证）
+- `armbian-build/userpatches/overlay/etc/hive/config.env.tpl`（嵌入所有共享凭证）
 - `armbian-build/userpatches/overlay/etc/xray/config.json`（含占位符）
 - `armbian-build/userpatches/overlay/etc/frp/frpc.toml.tpl`
 - `armbian-build/userpatches/overlay/etc/systemd/system/provision-node.service`

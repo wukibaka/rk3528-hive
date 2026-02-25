@@ -1,5 +1,5 @@
 groups:
-  - name: edge-nodes
+  - name: hive-nodes
     interval: 60s
     rules:
 

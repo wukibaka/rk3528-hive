@@ -24,7 +24,7 @@ fi
 # ─────────────────────────────────────────────
 # 1. 系统基础调优
 # ─────────────────────────────────────────────
-cat >> /etc/sysctl.d/99-edge.conf << 'EOF'
+cat >> /etc/sysctl.d/99-hive.conf << 'EOF'
 # IP 转发（代理节点必须）
 net.ipv4.ip_forward = 1
 net.ipv6.conf.all.forwarding = 1
@@ -94,16 +94,16 @@ fi
 # ─────────────────────────────────────────────
 # 5. 创建目录和权限
 # ─────────────────────────────────────────────
-mkdir -p /etc/edge /etc/cloudflared /etc/xray /etc/frp
+mkdir -p /etc/hive /etc/cloudflared /etc/xray /etc/frp
 # config.env 由 build.sh 渲染后放入 overlay，此处确保权限
-chmod 600 /etc/edge/config.env 2>/dev/null || true
+chmod 600 /etc/hive/config.env 2>/dev/null || true
 
 # ─────────────────────────────────────────────
 # 5.5. 预设账号密码（跳过首次启动交互）
 # ─────────────────────────────────────────────
 echo ">>> Setting up pre-configured user accounts..."
 
-# 设置root���码为 'edge123' (可在.env中配置)
+# 设置root密码为 'hive123' (可在.env中配置)
 ROOT_PASSWORD="${DEFAULT_ROOT_PASSWORD:-1234}"
 echo "root:${ROOT_PASSWORD}" | chpasswd
 echo ">>> Root password set to: ${ROOT_PASSWORD}"

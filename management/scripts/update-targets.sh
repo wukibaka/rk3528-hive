@@ -4,18 +4,18 @@
 #
 # 部署方式（VPS 上执行一次）：
 #   crontab -e
-#   * * * * * /opt/edge-management/scripts/update-targets.sh
+#   * * * * * /opt/hive-management/scripts/update-targets.sh
 
 set -e
 
 TAILNET="-"   # "-" = 当前账号默认 tailnet
-OUTPUT="/opt/edge-management/prometheus/targets/nodes.json"
+OUTPUT="/opt/hive-management/prometheus/targets/nodes.json"
 LOCK="/tmp/update-targets.lock"
 TAG="tag:hive"
 
 # 从环境变量或文件读取 token
 if [ -z "${TAILSCALE_OAUTH_SECRET}" ]; then
-    [ -f /opt/edge-management/.env ] && source /opt/edge-management/.env
+    [ -f /opt/hive-management/.env ] && source /opt/hive-management/.env
 fi
 
 if [ -z "${TAILSCALE_OAUTH_SECRET}" ]; then
@@ -40,7 +40,7 @@ RESULT=$(curl -sf \
              ],
              "labels": {
                "__meta_hostname": .hostname,
-               "__meta_mac6": (.hostname | ltrimstr("edge-")),
+               "__meta_mac6": (.hostname | ltrimstr("hive-")),
                "instance": .hostname
              }
            }

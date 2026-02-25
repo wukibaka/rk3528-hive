@@ -1,7 +1,7 @@
 ---
 # 检查所有节点的服务状态
 # 用法: ansible-playbook playbooks/service-status.yml
-- name: Check service status on all edge nodes
+- name: Check service status on all hive nodes
   hosts: tag_hive
   gather_facts: false
   vars:

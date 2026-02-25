@@ -14,7 +14,7 @@ scrape_configs:
         refresh_interval: 60s
     scrape_timeout: 10s
     relabel_configs:
-      # 用 hostname label 替换 instance（显示 edge-a4b2c1 而非 100.x.x.x:9100）
+      # 用 hostname label 替换 instance（显示 hive-a4b2c1 而非 100.x.x.x:9100）
       - source_labels: [__meta_hostname]
         target_label: instance
       - source_labels: [__meta_mac6]

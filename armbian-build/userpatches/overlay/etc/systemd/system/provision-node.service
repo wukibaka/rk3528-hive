@@ -3,7 +3,7 @@ Description=First Boot Node Provisioning
 After=network-online.target
 Wants=network-online.target
 # 已跑过则标记文件存在，ConditionPathExists 取反确保不重复执行
-ConditionPathExists=!/etc/edge/provisioned
+ConditionPathExists=!/etc/hive/provisioned
 
 [Service]
 Type=oneshot

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Custom Hive Edge Node Header
+# Custom Hive Node Header
 #
 
 set -o pipefail
@@ -76,7 +76,7 @@ KERNELID="$(uname -r)"
 
 _motd_mark_after_header
 
-# Custom Hive Edge Node Banner
+# Custom Hive Node Banner
 printf '\e[38;2;255;105;180m'  # Hot Pink color
 cat << 'EOF'
     __  ___            ______    __           _   __          __   
@@ -94,7 +94,7 @@ INTERFACE=$(ip link show | grep -E '^[0-9]+: (eth|en|wl)' | head -1 | cut -d: -f
 MAC_ADDR=$(ip link show "$INTERFACE" 2>/dev/null | grep -o -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | head -1)
 MAC6=$(echo "$MAC_ADDR" | tr -d : | tail -c 7)
 
-printf ' \e[1;96mHive Edge Node\e[0m \e[1;93medge-%s\e[0m powered by \e[0;92mArmbian v%s\x1B[0m\n' \
+printf ' \e[1;96mHive Network Node\e[0m \e[1;93mhive-%s\e[0m powered by \e[0;92mArmbian v%s\x1B[0m\n' \
 	"${MAC6}" "${VERSION}"
 
 printf ' Running on \e[1;94m%s\e[0m with Linux kernel \e[0;92m%s\x1B[0m\n' \

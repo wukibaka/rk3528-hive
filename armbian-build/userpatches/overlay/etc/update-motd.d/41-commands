@@ -6,7 +6,7 @@
 # License version 2. This program is licensed "as is" without any
 # warranty of any kind, whether express or implied.
 
-# Custom Edge Node Commands Display
+# Custom Hive Node Commands Display
 
 THIS_SCRIPT="commands"
 MOTD_DISABLE=""
@@ -29,7 +29,7 @@ _motd_spacer() {
 # read upgrade count to show upgrade command
 [[ -f /var/cache/apt/archives/updates.number ]] && . /var/cache/apt/archives/updates.number
 
-# Edge Node specific commands
+# Hive Node specific commands
 list=(
     "Configuration","","armbian-config","true"
     "Upgrade","","armbian-upgrade","[[ \"${NUM_UPDATES}\" -gt 0 ]]"
@@ -37,7 +37,7 @@ list=(
     "Node Status","","systemctl status provision-node","true"
     "Tailscale Status","","tailscale status","command -v tailscale"
     "Service Logs","","journalctl -f --no-hostname","true"
-    "Edge Config","","cat /etc/edge/config.env","[[ -f /etc/edge/config.env ]]"
+    "Hive Config","","cat /etc/hive/config.env","[[ -f /etc/hive/config.env ]]"
 )
 
 # verify if command exits on the system

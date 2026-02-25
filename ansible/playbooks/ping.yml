@@ -1,7 +1,7 @@
 ---
 # 基础连通性测试
 # 用法: ansible-playbook playbooks/ping.yml
-- name: Ping all edge nodes
+- name: Ping all hive nodes
   hosts: tag_hive
   gather_facts: false
   tasks:
@@ -9,7 +9,7 @@
       ansible.builtin.ping:
 
     - name: Show node info
-      ansible.builtin.command: cat /etc/edge/node-info
+      ansible.builtin.command: cat /etc/hive/node-info
       changed_when: false
       register: node_info
 

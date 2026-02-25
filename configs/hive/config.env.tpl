@@ -1,4 +1,4 @@
-# /etc/edge/config.env
+# /etc/hive/config.env
 # 由 scripts/build.sh 从此模板渲染，烧录进镜像
 # 所有节点共享同一份（每台设备首次启动时从此读取凭证）
 

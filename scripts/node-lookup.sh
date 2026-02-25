@@ -4,7 +4,7 @@
 #   ./scripts/node-lookup.sh a4b2c1
 #   ./scripts/node-lookup.sh a4:b2:c1:xx:xx:xx   （输入完整 MAC 也可）
 #
-# 输出与设备首次启动后 /etc/edge/node-info 完全一致
+# 输出与设备首次启动后 /etc/hive/node-info 完全一致
 
 set -e
 
@@ -23,7 +23,7 @@ if [ ${#MAC6} -ne 6 ]; then
     exit 1
 fi
 
-HOSTNAME="edge-${MAC6}"
+HOSTNAME="hive-${MAC6}"
 
 # ── EasyTier IP（MAC6 三字节映射）──────────────────────────
 ET_B1=$(printf "%d" "0x${MAC6:0:2}")
@@ -33,7 +33,7 @@ EASYTIER_IP="10.${ET_B1}.${ET_B2}.${ET_B3}"
 
 # ── FRP 端口（全 MAC 哈希，需要补全 MAC——此处仅从 MAC6 估算）──
 # 注意：provision-node.sh 使用完整 12 位 MAC 做哈希
-# 此脚本只有 MAC6，结果仅供参考；精确值在节点的 /etc/edge/node-info 里
+# 此脚本只有 MAC6，结果仅供参考；精确值在节点的 /etc/hive/node-info 里
 PORT_OFFSET=$(echo "$MAC6" | md5sum | tr -dc '0-9' | cut -c1-4)
 FRP_PORT_APPROX=$((10000 + 10#$PORT_OFFSET % 50000))
 
@@ -58,6 +58,6 @@ printf "│  FRP        ssh -p %-4s root@%-19s│\n" "${FRP_PORT_APPROX}*" "${VP
 printf "│  CF Proxy   https://%-28s│\n" "${MAC6}.${CF_DOMAIN_LABEL}"
 echo "├─────────────────────────────────────────────────┤"
 echo "│  * FRP port computed from MAC6 only (approx).  │"
-echo "│    Exact port: cat /etc/edge/node-info on node  │"
+echo "│    Exact port: cat /etc/hive/node-info on node  │"
 echo "└─────────────────────────────────────────────────┘"
 echo ""

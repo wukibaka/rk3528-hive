@@ -3,7 +3,7 @@
 # 用法:
 #   ansible-playbook playbooks/restart-services.yml -e "service=xray"
 #   ansible-playbook playbooks/restart-services.yml -e "service=cloudflared"
-- name: Restart service on all edge nodes
+- name: Restart service on all hive nodes
   hosts: tag_hive
   gather_facts: false
 

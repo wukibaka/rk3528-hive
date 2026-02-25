@@ -5,7 +5,7 @@
 
 set -e
 
-DONE_MARKER="/etc/edge/provisioned"
+DONE_MARKER="/etc/hive/provisioned"
 LOG="/var/log/provision-node.log"
 
 # 如果已经跑过就退出
@@ -21,7 +21,7 @@ for i in $(seq 1 30); do
     sleep 2
 done
 
-source /etc/edge/config.env
+source /etc/hive/config.env
 
 # ─────────────────────────────────────────────
 # 1. 设备唯一标识
@@ -30,7 +30,7 @@ source /etc/edge/config.env
 IFACE=$(ip -o link show | awk '$2 !~ /^lo:/ {gsub(/:$/,"",$2); print $2; exit}')
 MAC=$(cat /sys/class/net/${IFACE}/address | tr -d ':')
 MAC6="${MAC: -6}"
-HOSTNAME="edge-${MAC6}"
+HOSTNAME="hive-${MAC6}"
 
 echo ">>> Device: ${HOSTNAME}  MAC: ${MAC}  IFACE: ${IFACE}"
 
@@ -67,15 +67,15 @@ ET_B3=$(printf "%d" "0x${MAC6:4:2}")
 EASYTIER_IP="10.${ET_B1}.${ET_B2}.${ET_B3}"
 echo ">>> EasyTier IP: ${EASYTIER_IP}"
 
-# Tailscale：hostname 固定为 edge-<mac6>，MagicDNS 自动解析
+# Tailscale：hostname 固定为 hive-<mac6>，MagicDNS 自动解析
 # IP 由 Tailscale 云分配（不可预测），但 hostname 始终可达
 echo ">>> Tailscale hostname: ${HOSTNAME}"
 
 # ─────────────────────────────────────────────
 # 4. Cloudflare Tunnel（参考用户提供的脚本）
 # ─────────────────────────────────────────────
-TUNNEL_NAME="edge-${MAC6}"
-FULL_DOMAIN="${MAC6}.${CF_DOMAIN}"
+TUNNEL_NAME="hive-${MAC6}"
+FULL_DOMAIN="hive-${MAC6}.${CF_DOMAIN}"
 
 echo ">>> Creating CF Tunnel: ${TUNNEL_NAME} → ${FULL_DOMAIN}"
 
@@ -129,7 +129,7 @@ echo ">>> cloudflared config written."
 # 5. 写入节点信息汇总文件（运维查阅用）
 # ─────────────────────────────────────────────
 TAILSCALE_IP_PENDING="pending"
-cat > /etc/edge/node-info << EOF
+cat > /etc/hive/node-info << EOF
 # 本节点访问信息（由 provision-node.sh 生成）
 HOSTNAME=${HOSTNAME}
 MAC=${MAC}
@@ -147,7 +147,7 @@ XRAY_UUID=${UUID}
 # CF Tunnel
 TUNNEL_ID=${TUNNEL_ID}
 EOF
-echo ">>> node-info written to /etc/edge/node-info"
+echo ">>> node-info written to /etc/hive/node-info"
 
 # ─────────────────────────────────────────────
 # 6. 启动核心服务
@@ -179,7 +179,7 @@ tailscale up \
 TAILSCALE_IP=$(tailscale ip -4 2>/dev/null || echo "pending")
 # 更新 node-info 里的 Tailscale IP
 sed -i "s/^TAILSCALE_HOST=.*/TAILSCALE_HOST=${HOSTNAME}\nTAILSCALE_IP=${TAILSCALE_IP}/" \
-    /etc/edge/node-info
+    /etc/hive/node-info
 
 if [ -n "${NODE_REGISTRY_URL}" ]; then
     curl -sf -X POST "${NODE_REGISTRY_URL}/api/nodes/register" \
