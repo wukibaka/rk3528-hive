@@ -1,0 +1,20 @@
+# Armbian MOTD configuration
+#
+# Hive Edge Node custom settings
+
+# Disable specific MOTD modules (space-separated list)
+# Available modules: header sysinfo ip-info containers-info tips commands
+MOTD_DISABLE=""
+
+# Enable all our custom modules
+MOTD_ENABLE="header sysinfo ip-info edge-services commands"
+
+# Custom colors for Hive branding
+VENDORCOLOR="255;105;180"  # Hot Pink
+VENDORPRETTYNAME="Hive Edge Network"
+
+# Show detailed network information
+SHOW_IP_PATTERN=""
+
+# Enable performance monitoring
+SHOW_SYSTEM_LOAD="yes"

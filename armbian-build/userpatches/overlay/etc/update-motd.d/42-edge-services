@@ -1,0 +1,126 @@
+#!/bin/bash
+#
+# Edge Node Services Status Display
+# Custom MOTD script for Hive Edge Node
+
+set -e
+
+THIS_SCRIPT="edge-services"
+MOTD_DISABLE=""
+
+safe_source() { [[ -f "$1" ]] && . "$1"; }
+
+# Load MOTD config
+safe_source /etc/default/armbian-motd
+for f in ${MOTD_DISABLE}; do
+    [[ "${f}" == "${THIS_SCRIPT}" ]] && exit 0
+done
+
+# Load edge node configuration
+safe_source /etc/edge/config.env
+
+echo ""
+printf "\e[0;90m Edge Services: \x1B[0m\n"
+echo ""
+
+# Function to check service status
+check_service() {
+    local service_name="$1"
+    local display_name="$2"
+    local config_check="$3"
+
+    # Check if service is enabled and running
+    local status="⭕ Disabled"
+    local color="\e[0;91m"  # Red
+
+    if systemctl is-enabled "${service_name}" >/dev/null 2>&1; then
+        if systemctl is-active "${service_name}" >/dev/null 2>&1; then
+            status="🟢 Running"
+            color="\e[0;92m"  # Green
+        else
+            status="🟡 Enabled"
+            color="\e[0;93m"  # Yellow
+        fi
+    fi
+
+    # Add configuration check
+    if [[ -n "$config_check" ]] && eval "$config_check" 2>/dev/null; then
+        config_status=" (configured)"
+    else
+        config_status=" (not configured)"
+    fi
+
+    printf " \e[1;36m%-18s\e[0m: %b%s\e[0m%s\n" "$display_name" "$color" "$status" "$config_status"
+}
+
+# Function to check tunnel connectivity
+check_tunnel_connectivity() {
+    local tunnel_name="$1"
+    local check_cmd="$2"
+    local display_name="$3"
+
+    local status="⭕ Disconnected"
+    local color="\e[0;91m"
+
+    if eval "$check_cmd" >/dev/null 2>&1; then
+        status="🟢 Connected"
+        color="\e[0;92m"
+    fi
+
+    printf " \e[1;36m%-18s\e[0m: %b%s\e[0m\n" "$display_name" "$color" "$status"
+}
+
+# Check core services
+check_service "tailscaled" "Tailscale VPN" '[[ -n "${TAILSCALE_OAUTH_SECRET}" ]]'
+check_service "provision-node" "Node Provision" "true"
+check_service "prometheus-node-exporter" "Metrics Export" "true"
+
+# Check tunnel services (if they exist)
+if systemctl list-unit-files | grep -q "xray.*service"; then
+    check_service "xray" "Xray Proxy" '[[ -f "/etc/xray/config.json" ]]'
+fi
+
+if systemctl list-unit-files | grep -q "cloudflared.*service"; then
+    check_service "cloudflared" "Cloudflare Tunnel" '[[ -n "${CF_API_TOKEN}" ]]'
+fi
+
+if systemctl list-unit-files | grep -q "frpc.*service"; then
+    check_service "frpc" "FRP Client" '[[ -n "${FRP_SERVER_ADDR}" ]]'
+fi
+
+if systemctl list-unit-files | grep -q "easytier.*service"; then
+    check_service "easytier" "EasyTier P2P" '[[ -n "${EASYTIER_NETWORK_NAME}" ]]'
+fi
+
+echo ""
+printf "\e[0;90m Network Status: \x1B[0m\n"
+echo ""
+
+# Check network connectivity
+check_tunnel_connectivity "Internet" "ping -c1 -W2 8.8.8.8" "Internet Access"
+
+# Check Tailscale connectivity
+if command -v tailscale >/dev/null 2>&1; then
+    check_tunnel_connectivity "Tailscale" "tailscale status --peers=false" "Tailscale Network"
+fi
+
+# Show MAC address for node identification
+if [[ -n "$(ip link show | grep -E '^[0-9]+: (eth|en|wl)' | head -1)" ]]; then
+    INTERFACE=$(ip link show | grep -E '^[0-9]+: (eth|en|wl)' | head -1 | cut -d: -f2 | tr -d ' ')
+    MAC_ADDR=$(ip link show "$INTERFACE" 2>/dev/null | grep -o -E '([a-f0-9]{2}:){5}[a-f0-9]{2}' | head -1)
+    if [[ -n "$MAC_ADDR" ]]; then
+        MAC6=$(echo "$MAC_ADDR" | tr -d : | tail -c 7)
+        echo ""
+        printf "\e[0;90m Node Identity: \x1B[0m\n"
+        echo ""
+        printf " \e[1;36m%-18s\e[0m: \e[0;94m%s\e[0m\n" "MAC Address" "$MAC_ADDR"
+        printf " \e[1;36m%-18s\e[0m: \e[0;94medge-%s\e[0m\n" "Node ID" "$MAC6"
+        if [[ -n "${CF_DOMAIN}" ]]; then
+            printf " \e[1;36m%-18s\e[0m: \e[0;94medge-%s.%s\e[0m\n" "Public Domain" "$MAC6" "$CF_DOMAIN"
+        fi
+    fi
+fi
+
+echo ""
+
+exit 0
