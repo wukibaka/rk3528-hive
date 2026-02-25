@@ -122,6 +122,35 @@ if [[ -n "$MAC_ADDR" ]]; then
         printf " \e[1;36m%-18s\e[0m: \e[0;94mhive-%s.%s\e[0m\n" "Public Domain" "$MAC6" "${CF_DOMAIN}"
 fi
 
+# Connection Info（从 provision-node.sh 写入的 node-info 读取）
+if [[ -f /etc/hive/node-info ]]; then
+    safe_source /etc/hive/node-info
+
+    echo ""
+    printf "\e[0;90m Connection Info: \x1B[0m\n"
+    echo ""
+
+    [[ -n "${TAILSCALE_HOST:-}" ]] && \
+        printf " \e[1;36m%-18s\e[0m: \e[0;93mssh root@%s\e[0m\n" "Tailscale" "${TAILSCALE_HOST}"
+
+    [[ -n "${EASYTIER_IP:-}" ]] && \
+        printf " \e[1;36m%-18s\e[0m: \e[0;93mssh root@%s\e[0m\n" "EasyTier" "${EASYTIER_IP}"
+
+    if [[ -n "${FRP_PORT:-}" && -n "${FRP_SERVER_ADDR:-}" ]]; then
+        printf " \e[1;36m%-18s\e[0m: \e[0;93mssh -p %s root@%s\e[0m\n" "FRP" "${FRP_PORT}" "${FRP_SERVER_ADDR}"
+    fi
+
+    [[ -n "${CF_URL:-}" ]] && \
+        printf " \e[1;36m%-18s\e[0m: \e[0;93m%s\e[0m\n" "CF Proxy" "${CF_URL}"
+
+    # VLESS 链接：vless://<uuid>@<domain>:443?type=xhttp&security=tls&path=/ray#<hostname>
+    if [[ -n "${XRAY_UUID:-}" && -n "${CF_URL:-}" ]]; then
+        CF_HOST="${CF_URL#https://}"
+        VLESS_LINK="vless://${XRAY_UUID}@${CF_HOST}:443?type=xhttp&security=tls&path=%2Fray#${HOSTNAME:-hive}"
+        printf " \e[1;36m%-18s\e[0m: \e[0;93m%s\e[0m\n" "Xray (VLESS)" "${VLESS_LINK}"
+    fi
+fi
+
 echo ""
 
 exit 0
