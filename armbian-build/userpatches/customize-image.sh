@@ -51,7 +51,8 @@ apt-get install -y --no-install-recommends \
     gnupg \
     prometheus-node-exporter \
     ufw \
-    fail2ban
+    fail2ban \
+    zsh
 
 # ─────────────────────────────────────────────
 # 3. 安装 Tailscale（官方 apt 源）
@@ -126,8 +127,8 @@ chmod -x /etc/profile.d/armbian-check-first-login-reboot.sh 2>/dev/null || true
 systemctl disable armbian-firstrun.service 2>/dev/null || true
 systemctl mask armbian-firstrun.service 2>/dev/null || true
 
-# 设置root默认shell为bash
-chsh -s /bin/bash root
+# 设置root默认shell为zsh
+chsh -s /bin/zsh root
 
 # 允许root通过SSH登录
 echo ">>> Configuring SSH for root access..."
