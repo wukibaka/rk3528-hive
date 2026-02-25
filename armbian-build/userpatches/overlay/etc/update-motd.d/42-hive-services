@@ -44,7 +44,7 @@ check_service() {
     fi
 
     # Add configuration check
-    if [[ -n "$config_check" ]] && eval "$config_check" 2>/dev/null; then
+    if [[ -n "$config_check" ]] && eval "$config_check" >/dev/null 2>&1; then
         config_status=" (configured)"
     else
         config_status=" (not configured)"
