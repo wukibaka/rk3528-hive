@@ -105,7 +105,9 @@ chmod 600 /etc/hive/config.env 2>/dev/null || true
 # ─────────────────────────────────────────────
 echo ">>> Setting up pre-configured user accounts..."
 
-# 设置root密码为 'hive123' (可在.env中配置)
+# 从 overlay 渲染好的配置文件读取密码
+[ -f /etc/hive/config.env ] && . /etc/hive/config.env
+
 ROOT_PASSWORD="${DEFAULT_ROOT_PASSWORD:-1234}"
 echo "root:${ROOT_PASSWORD}" | chpasswd
 echo ">>> Root password set to: ${ROOT_PASSWORD}"
