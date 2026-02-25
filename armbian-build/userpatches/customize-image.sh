@@ -63,7 +63,12 @@ for bin in xray cloudflared frpc easytier-core; do
     fi
 done
 
-chmod +x /usr/local/bin/provision-node.sh
+if [ -f "/usr/local/bin/provision-node.sh" ]; then
+    chmod +x /usr/local/bin/provision-node.sh
+    echo ">>> provision-node.sh: OK"
+else
+    echo ">>> WARNING: /usr/local/bin/provision-node.sh not found (run download-binaries.sh first)"
+fi
 
 # ─────────────────────────────────────────────
 # 5. 创建目录和权限
