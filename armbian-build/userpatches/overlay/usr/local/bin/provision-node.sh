@@ -135,13 +135,19 @@ cat > /etc/cloudflared/cert.json << EOF
 }
 EOF
 
-# 添加 DNS CNAME 记录
-curl -s -X POST \
+# 添加 DNS CNAME 记录（name 必须与 cloudflared config.yml 的 hostname 前缀一致）
+DNS_RES=$(curl -s -X POST \
     "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records" \
     -H "Authorization: Bearer ${CF_API_TOKEN}" \
     -H "Content-Type: application/json" \
-    --data "{\"type\":\"CNAME\",\"name\":\"${MAC6}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"proxied\":true}" \
-    > /dev/null && echo ">>> DNS record created."
+    --data "{\"type\":\"CNAME\",\"name\":\"${TUNNEL_NAME}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"proxied\":true}")
+if echo "$DNS_RES" | grep -q '"success":true'; then
+    echo ">>> DNS record created: ${FULL_DOMAIN}"
+else
+    echo "!!! DNS record creation failed:"
+    echo "$DNS_RES"
+    exit 1
+fi
 
 # 生成 cloudflared 运行配置（protocol: http2，与用户脚本一致）
 cat > /etc/cloudflared/config.yml << EOF
