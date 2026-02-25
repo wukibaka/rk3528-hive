@@ -4,6 +4,7 @@ Documentation=https://github.com/your-org/hive-network
 After=network.target
 Before=ssh.service tailscaled.service
 Wants=network.target
+ConditionPathExists=!/var/lib/hive/firewall-configured
 
 [Service]
 Type=oneshot
@@ -11,15 +12,8 @@ ExecStart=/usr/local/bin/setup-firewall.sh
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
-
-# 安全设置
 User=root
 Group=root
-
-# 确保只运行一次
-ConditionPathExists=!/var/lib/hive/firewall-configured
-
-# 创建标记文件
 ExecStartPost=/bin/bash -c 'mkdir -p /var/lib/hive && touch /var/lib/hive/firewall-configured'
 
 [Install]

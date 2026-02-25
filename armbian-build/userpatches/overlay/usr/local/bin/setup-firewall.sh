@@ -125,9 +125,6 @@ ufw allow out $FRP_PORT comment "FRP Client - Port $FRP_PORT"
 ufw allow out 41641/udp comment 'Tailscale - UDP'
 ufw allow out 443/tcp comment 'Tailscale - TCP Fallback'
 
-# 允许已建立连接的响应流量
-ufw allow in proto tcp to any port 1024:65535 from any port 443 comment 'HTTPS Response Traffic'
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 安全加固
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

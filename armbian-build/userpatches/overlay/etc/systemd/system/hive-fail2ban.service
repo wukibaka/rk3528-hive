@@ -4,6 +4,7 @@ Documentation=https://www.fail2ban.org/
 After=network.target ufw.service hive-firewall.service
 Before=ssh.service
 Wants=network.target
+ConditionPathExists=!/var/lib/hive/fail2ban-configured
 
 [Service]
 Type=oneshot
@@ -11,15 +12,8 @@ ExecStart=/usr/local/bin/setup-fail2ban.sh
 RemainAfterExit=yes
 StandardOutput=journal
 StandardError=journal
-
-# 安全设置
 User=root
 Group=root
-
-# 确保只运行一次
-ConditionPathExists=!/var/lib/hive/fail2ban-configured
-
-# 创建标记文件
 ExecStartPost=/bin/bash -c 'mkdir -p /var/lib/hive && touch /var/lib/hive/fail2ban-configured'
 
 [Install]
