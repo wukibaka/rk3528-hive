@@ -99,6 +99,40 @@ mkdir -p /etc/edge /etc/cloudflared /etc/xray /etc/frp
 chmod 600 /etc/edge/config.env 2>/dev/null || true
 
 # ─────────────────────────────────────────────
+# 5.5. 预设账号密码（跳过首次启动交互）
+# ─────────────────────────────────────────────
+echo ">>> Setting up pre-configured user accounts..."
+
+# 设置root���码为 'edge123' (可在.env中配置)
+ROOT_PASSWORD="${DEFAULT_ROOT_PASSWORD:-1234}"
+echo "root:${ROOT_PASSWORD}" | chpasswd
+echo ">>> Root password set to: ${ROOT_PASSWORD}"
+
+# 完全禁用首次登录交互（只保留root账号）
+echo ">>> Disabling first login interactive setup..."
+
+# 移除首次登录触发文件
+rm -f /root/.not_logged_in_yet
+
+# 禁用首次登录检查脚本
+chmod -x /etc/profile.d/armbian-check-first-login.sh 2>/dev/null || true
+chmod -x /etc/profile.d/armbian-check-first-login-reboot.sh 2>/dev/null || true
+
+# 禁用首次登录服务
+systemctl disable armbian-firstrun.service 2>/dev/null || true
+systemctl mask armbian-firstrun.service 2>/dev/null || true
+
+# 设置root默认shell为bash
+chsh -s /bin/bash root
+
+# 允许root通过SSH登录
+echo ">>> Configuring SSH for root access..."
+sed -i 's/#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+echo ">>> First login interactive setup completely disabled - root only mode"
+
+# ─────────────────────────────────────────────
 # 6. 启用服务（只启用 provision-node，其余由它在首次启动时 enable）
 # ─────────────────────────────────────────────
 if [ -f "/etc/systemd/system/provision-node.service" ]; then
