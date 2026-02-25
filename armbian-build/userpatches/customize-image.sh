@@ -1,6 +1,6 @@
 #!/bin/bash
 # Armbian 构建钩子 — 在 chroot 内执行
-# 此时 overlay/ 目录的文件已被复制到镜像根目录
+# overlay/ 目录通过 bind mount 挂载到 /tmp/overlay，需要手动复制
 # 参数: $1=RELEASE $2=LINUXFAMILY $3=BOARD $4=BUILD_DESKTOP $5=ARCH
 
 set -e
@@ -8,6 +8,18 @@ RELEASE="$1"
 ARCH="$5"
 
 echo ">>> customize-image.sh: RELEASE=${RELEASE} ARCH=${ARCH}"
+
+# ─────────────────────────────────────────────
+# 0. 从overlay复制文件到根目录
+# ─────────────────────────────────────────────
+echo ">>> Copying overlay files to root..."
+if [ -d "/tmp/overlay" ]; then
+    cp -r /tmp/overlay/* / 2>/dev/null || true
+    echo ">>> Overlay files copied to root directory"
+    ls -la /usr/local/bin/ | head -10 || true
+else
+    echo ">>> WARNING: /tmp/overlay not found"
+fi
 
 # ─────────────────────────────────────────────
 # 1. 系统基础调优
@@ -54,12 +66,14 @@ apt-get install -y tailscale
 # ─────────────────────────────────────────────
 # 4. 设置二进制权限（由 download-binaries.sh 预置到 overlay）
 # ─────────────────────────────────────────────
+MISSING_BINARIES=""
 for bin in xray cloudflared frpc easytier-core; do
     if [ -f "/usr/local/bin/${bin}" ]; then
         chmod +x "/usr/local/bin/${bin}"
         echo ">>> ${bin}: OK"
     else
         echo ">>> WARNING: /usr/local/bin/${bin} not found (run download-binaries.sh first)"
+        MISSING_BINARIES="${MISSING_BINARIES} ${bin}"
     fi
 done
 
@@ -68,6 +82,13 @@ if [ -f "/usr/local/bin/provision-node.sh" ]; then
     echo ">>> provision-node.sh: OK"
 else
     echo ">>> WARNING: /usr/local/bin/provision-node.sh not found (run download-binaries.sh first)"
+    MISSING_BINARIES="${MISSING_BINARIES} provision-node.sh"
+fi
+
+if [ -n "$MISSING_BINARIES" ]; then
+    echo ">>> ERROR: Missing binaries:$MISSING_BINARIES"
+    echo ">>> Please run: ./scripts/download-binaries.sh"
+    exit 1
 fi
 
 # ─────────────────────────────────────────────
@@ -80,7 +101,14 @@ chmod 600 /etc/edge/config.env 2>/dev/null || true
 # ─────────────────────────────────────────────
 # 6. 启用服务（只启用 provision-node，其余由它在首次启动时 enable）
 # ─────────────────────────────────────────────
-systemctl enable provision-node.service
+if [ -f "/etc/systemd/system/provision-node.service" ]; then
+    systemctl enable provision-node.service
+    echo ">>> provision-node.service enabled"
+else
+    echo ">>> ERROR: provision-node.service not found"
+    exit 1
+fi
+
 systemctl enable tailscaled.service   # daemon 预启动，tailscale up 由 provision 执行
 systemctl enable prometheus-node-exporter.service
 
