@@ -6,7 +6,8 @@ rule_files:
   - /etc/prometheus/rules/*.yml
 
 scrape_configs:
-  # 边缘节点（通过 Tailscale IP 抓取，Node Registry cron 更新此文件）
+  # 边缘节点（通过 Tailscale IP 抓取，Node Registry cron 每分钟更新此文件）
+  # nodes.json 中的 hostname 标签在此被重命名为 instance，避免被 __address__ 覆盖
   - job_name: 'hives'
     file_sd_configs:
       - files:
@@ -14,20 +15,17 @@ scrape_configs:
         refresh_interval: 60s
     scrape_timeout: 10s
     relabel_configs:
-      # 用 hostname label 替换 instance（显示 hive-a4b2c1 而非 100.x.x.x:9100）
-      - source_labels: [__meta_hostname]
+      - source_labels: [hostname]
         target_label: instance
-      - source_labels: [__meta_mac6]
-        target_label: mac6
 
-  # Prometheus 自身
+  # Prometheus 自身（--web.route-prefix=/ 后内部路径为 /metrics）
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
 
-  # 中国 VPS 自身（Grafana 所在机器）
+  # 管理 VPS 自身（host.docker.internal 指向宿主机，需 extra_hosts: host-gateway）
   - job_name: 'management-server'
     static_configs:
-      - targets: ['localhost:9100']
+      - targets: ['host.docker.internal:9100']
         labels:
           instance: 'management'

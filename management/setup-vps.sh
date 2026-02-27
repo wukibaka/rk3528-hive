@@ -60,7 +60,8 @@ fi
 # ─────────────────────────────────────────────
 # 3. 安装依赖工具
 # ─────────────────────────────────────────────
-apt-get install -y --no-install-recommends jq curl make
+apt-get install -y --no-install-recommends jq curl make prometheus-node-exporter
+systemctl enable --now prometheus-node-exporter
 
 # ─────────────────────────────────────────────
 # 4. 安装 Go（若缺失或版本过旧）
@@ -189,7 +190,7 @@ if [ -n "${REGISTRY_API_SECRET}" ]; then
 fi
 
 # cron 直连 Go 服务（不经 nginx），路径无 /api 前缀
-CRON_LINE="* * * * * root curl -sf ${AUTH_HEADER} ${REGISTRY_LOCAL_URL}/prometheus-targets > ${TARGETS_FILE}"
+CRON_LINE="* * * * * root curl -sf ${AUTH_HEADER} -o ${TARGETS_FILE} ${REGISTRY_LOCAL_URL}/prometheus-targets"
 # 替换同名 cron 行（grep 匹配 prometheus-targets，保证幂等）
 TMP=$(mktemp)
 (crontab -l 2>/dev/null | grep -v "prometheus-targets"; echo "$CRON_LINE") > "$TMP"

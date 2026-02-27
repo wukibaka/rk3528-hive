@@ -5,12 +5,15 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # 让容器能访问宿主机端口（node-exporter 9100）
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
-      - '--web.enable-lifecycle'         # 支持 POST /-/reload 热重载
-      - '--web.external-url=${PROMETHEUS_EXTERNAL_URL:-/prometheus/}'  # 域名反代时填 https://example.com/prometheus/
+      - '--web.enable-lifecycle'
+      - '--web.external-url=${PROMETHEUS_EXTERNAL_URL:-/prometheus}'  # 对外展示的完整 URL
+      - '--web.route-prefix=/'              # 容器内部路由保持 /metrics /targets，nginx 负责剥离前缀
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/rules:/etc/prometheus/rules:ro
