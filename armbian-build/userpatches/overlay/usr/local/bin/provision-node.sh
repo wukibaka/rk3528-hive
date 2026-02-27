@@ -116,44 +116,81 @@ FULL_DOMAIN="hive-${MAC6}.${CF_DOMAIN}"
 
 echo ">>> Creating CF Tunnel: ${TUNNEL_NAME} → ${FULL_DOMAIN}"
 
-CREATE_RES=$(curl -s -X POST \
+# 先尝试查找已存在的同名 tunnel（幂等）
+EXISTING=$(curl -s -G \
     "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/tunnels" \
     -H "Authorization: Bearer ${CF_API_TOKEN}" \
-    -H "Content-Type: application/json" \
-    --data "{\"name\":\"${TUNNEL_NAME}\",\"config_src\":\"local\"}")
+    --data-urlencode "name=${TUNNEL_NAME}" \
+    --data-urlencode "is_deleted=false")
 
-TUNNEL_ID=$(echo "$CREATE_RES" | jq -r '.result.id')
-TUNNEL_SECRET=$(echo "$CREATE_RES" | jq -r '.result.credentials_file.TunnelSecret')
+TUNNEL_ID=$(echo "$EXISTING" | jq -r '.result[0].id // empty')
 
-if [ "$TUNNEL_ID" = "null" ] || [ -z "$TUNNEL_ID" ]; then
-    echo "!!! CF Tunnel creation failed:"
-    echo "$CREATE_RES"
-    exit 1
-fi
-echo ">>> Tunnel ID: ${TUNNEL_ID}"
+if [ -n "$TUNNEL_ID" ] && [ -f /etc/cloudflared/cert.json ]; then
+    # tunnel 存在且本地有凭证，直接复用
+    echo ">>> Tunnel already exists: ${TUNNEL_ID}, reusing with existing cert.json."
+else
+    # 没有本地凭证就必须（重新）创建 tunnel 才能拿到 secret
+    if [ -n "$TUNNEL_ID" ]; then
+        echo ">>> Tunnel exists but no local cert.json, deleting to recreate..."
+        curl -s -X DELETE \
+            "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/tunnels/${TUNNEL_ID}" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" >/dev/null
+    fi
 
-# 写入 cloudflared 凭证文件（与用户脚本格式一致）
-cat > /etc/cloudflared/cert.json << EOF
+    CREATE_RES=$(curl -s -X POST \
+        "https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/tunnels" \
+        -H "Authorization: Bearer ${CF_API_TOKEN}" \
+        -H "Content-Type: application/json" \
+        --data "{\"name\":\"${TUNNEL_NAME}\",\"config_src\":\"local\"}")
+
+    TUNNEL_ID=$(echo "$CREATE_RES" | jq -r '.result.id')
+    TUNNEL_SECRET=$(echo "$CREATE_RES" | jq -r '.result.credentials_file.TunnelSecret')
+
+    if [ "$TUNNEL_ID" = "null" ] || [ -z "$TUNNEL_ID" ]; then
+        echo "!!! CF Tunnel creation failed:"
+        echo "$CREATE_RES"
+        exit 1
+    fi
+
+    cat > /etc/cloudflared/cert.json << EOF
 {
     "AccountTag":   "${CF_ACCOUNT_ID}",
     "TunnelSecret": "${TUNNEL_SECRET}",
     "TunnelID":     "${TUNNEL_ID}"
 }
 EOF
+fi
+echo ">>> Tunnel ID: ${TUNNEL_ID}"
 
-# 添加 DNS CNAME 记录（name 必须与 cloudflared config.yml 的 hostname 前缀一致）
-DNS_RES=$(curl -s -X POST \
+# 添加 DNS CNAME 记录（幂等：先查再建）
+EXISTING_DNS=$(curl -s -G \
     "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records" \
     -H "Authorization: Bearer ${CF_API_TOKEN}" \
-    -H "Content-Type: application/json" \
-    --data "{\"type\":\"CNAME\",\"name\":\"${TUNNEL_NAME}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"proxied\":true}")
-if echo "$DNS_RES" | grep -q '"success":true'; then
-    echo ">>> DNS record created: ${FULL_DOMAIN}"
+    --data-urlencode "type=CNAME" \
+    --data-urlencode "name=${FULL_DOMAIN}")
+
+DNS_ID=$(echo "$EXISTING_DNS" | jq -r '.result[0].id // empty')
+
+if [ -n "$DNS_ID" ]; then
+    echo ">>> DNS record already exists for ${FULL_DOMAIN}, updating."
+    curl -s -X PUT \
+        "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records/${DNS_ID}" \
+        -H "Authorization: Bearer ${CF_API_TOKEN}" \
+        -H "Content-Type: application/json" \
+        --data "{\"type\":\"CNAME\",\"name\":\"${TUNNEL_NAME}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"proxied\":true}" >/dev/null
 else
-    echo "!!! DNS record creation failed:"
-    echo "$DNS_RES"
-    exit 1
+    DNS_RES=$(curl -s -X POST \
+        "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records" \
+        -H "Authorization: Bearer ${CF_API_TOKEN}" \
+        -H "Content-Type: application/json" \
+        --data "{\"type\":\"CNAME\",\"name\":\"${TUNNEL_NAME}\",\"content\":\"${TUNNEL_ID}.cfargotunnel.com\",\"proxied\":true}")
+    if ! echo "$DNS_RES" | grep -q '"success":true'; then
+        echo "!!! DNS record creation failed:"
+        echo "$DNS_RES"
+        exit 1
+    fi
 fi
+echo ">>> DNS record OK: ${FULL_DOMAIN}"
 
 # 生成 cloudflared 运行配置（protocol: http2，与用户脚本一致）
 cat > /etc/cloudflared/config.yml << EOF
