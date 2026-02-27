@@ -14,9 +14,10 @@ echo ">>> customize-image.sh: RELEASE=${RELEASE} ARCH=${ARCH}"
 # ─────────────────────────────────────────────
 echo ">>> Copying overlay files to root..."
 if [ -d "/tmp/overlay" ]; then
-    cp -r /tmp/overlay/* / 2>/dev/null || true
+    cp -a /tmp/overlay/* / 2>/dev/null || true
+    # 确保 MOTD 脚本可执行
+    chmod +x /etc/update-motd.d/* 2>/dev/null || true
     echo ">>> Overlay files copied to root directory"
-    ls -la /usr/local/bin/ | head -10 || true
 else
     echo ">>> WARNING: /tmp/overlay not found"
 fi
