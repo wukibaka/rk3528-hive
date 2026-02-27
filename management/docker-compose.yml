@@ -5,15 +5,14 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
-    # host 网络模式：直接共享宿主机网络栈，可访问 tailscale0 接口抓取节点指标
-    network_mode: host
+    network_mode: host                                     # 访问 tailscale0 抓取节点
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
-      - '--web.listen-address=127.0.0.1:4230'           # 绑定本地，nginx 反代
-      - '--web.external-url=${PROMETHEUS_EXTERNAL_URL:-/prometheus}'
+      - '--web.listen-address=127.0.0.1:4230'
+      - '--web.external-url=${PROMETHEUS_EXTERNAL_URL:-/prometheus}'                        # 内部路由在 /，nginx 剥前缀
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/rules:/etc/prometheus/rules:ro
@@ -26,26 +25,18 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
-    extra_hosts:
-      - "host.docker.internal:host-gateway"             # 让容器访问宿主机上的 Prometheus
+    network_mode: host                                     # 与 Prometheus 同一网络栈，直接 localhost:4230
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-changeme}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=4231                           # host 模式下用此代替 ports 映射
       - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-https://example.com/grafana}
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
-    ports:
-      - "127.0.0.1:4231:3000"
-    networks:
-      - monitoring
 
 volumes:
   prometheus_data:
   grafana_data:
-
-networks:
-  monitoring:
-    driver: bridge
