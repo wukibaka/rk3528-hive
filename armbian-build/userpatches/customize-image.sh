@@ -15,6 +15,8 @@ echo ">>> customize-image.sh: RELEASE=${RELEASE} ARCH=${ARCH}"
 echo ">>> Copying overlay files to root..."
 if [ -d "/tmp/overlay" ]; then
     cp -a /tmp/overlay/* / 2>/dev/null || true
+    # cp -a 会保留构建主机的 UID/GID（kent:kent），必须修正回 root:root
+    chown -R root:root /etc /usr/local/bin 2>/dev/null || true
     # 确保 MOTD 脚本可执行
     chmod +x /etc/update-motd.d/* 2>/dev/null || true
     echo ">>> Overlay files copied to root directory"
