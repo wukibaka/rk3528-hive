@@ -285,6 +285,23 @@ if [ -z "${TS_AUTHKEY}" ]; then
     TS_AUTHKEY="${TAILSCALE_OAUTH_SECRET}"
 fi
 
+# 清理同 hostname 的旧节点（避免重刷后出现 -1 -2 后缀）
+if [ -n "${TS_ACCESS_TOKEN}" ]; then
+    echo ">>> Checking for stale Tailscale nodes with hostname: ${HOSTNAME}..."
+    STALE_IDS=$(curl -sf \
+        -H "Authorization: Bearer ${TS_ACCESS_TOKEN}" \
+        "https://api.tailscale.com/api/v2/tailnet/-/devices" | \
+        jq -r --arg h "${HOSTNAME}" '.devices[] | select(.hostname == $h) | .id')
+    for DEVICE_ID in $STALE_IDS; do
+        echo ">>> Deleting stale node: ${DEVICE_ID}"
+        curl -sf -X DELETE \
+            -H "Authorization: Bearer ${TS_ACCESS_TOKEN}" \
+            "https://api.tailscale.com/api/v2/device/${DEVICE_ID}" \
+            && echo ">>> Deleted ${DEVICE_ID}" \
+            || echo ">>> Failed to delete ${DEVICE_ID} (non-fatal)"
+    done
+fi
+
 tailscale up \
     --authkey="${TS_AUTHKEY}" \
     --hostname="${HOSTNAME}" \
