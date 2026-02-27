@@ -247,10 +247,17 @@ echo ">>> Joining Tailscale..."
 systemctl enable --now tailscaled
 sleep 2
 
-# 用 OAuth Client Secret 先生成一个非临时（ephemeral=false）的 pre-auth key
-# 直接将 OAuth Secret 传给 tailscale up 会默认创建 ephemeral 设备
+# OAuth client secret → access token → 生成非临时 pre-auth key
+# tskey-client-<ID>-<SECRET> 格式中提取 client ID
+TS_CLIENT_ID=$(echo "${TAILSCALE_OAUTH_SECRET}" | sed 's/tskey-client-\([^-]*\)-.*/\1/')
+
+TS_ACCESS_TOKEN=$(curl -sf -X POST "https://api.tailscale.com/api/v2/oauth/token" \
+    -d "client_id=${TS_CLIENT_ID}" \
+    -d "client_secret=${TAILSCALE_OAUTH_SECRET}" | jq -r '.access_token // empty')
+
+if [ -n "${TS_ACCESS_TOKEN}" ]; then
 TS_AUTHKEY=$(curl -sf -X POST "https://api.tailscale.com/api/v2/tailnet/-/keys" \
-    -u "${TAILSCALE_OAUTH_SECRET}:" \
+        -H "Authorization: Bearer ${TS_ACCESS_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "{
         \"capabilities\": {
@@ -264,10 +271,11 @@ TS_AUTHKEY=$(curl -sf -X POST "https://api.tailscale.com/api/v2/tailnet/-/keys" 
             }
         },
         \"expirySeconds\": 300
-    }" | jq -r '.key')
+        }" | jq -r '.key // empty')
+fi
 
-if [ -z "${TS_AUTHKEY}" ] || [ "${TS_AUTHKEY}" = "null" ]; then
-    echo "!!! Failed to generate Tailscale auth key, falling back to OAuth secret"
+if [ -z "${TS_AUTHKEY}" ]; then
+    echo "!!! Failed to generate Tailscale auth key via OAuth, using secret directly"
     TS_AUTHKEY="${TAILSCALE_OAUTH_SECRET}"
 fi
 
