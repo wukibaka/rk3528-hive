@@ -72,6 +72,88 @@ ufw allow from 100.0.0.0/8 to any port 9100 comment 'Node Exporter - Tailscale O
 # ufw allow from YOUR_MONITORING_IP to any port 9100 comment 'Node Exporter - Monitoring'
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Mihomo TProxy（局域网透明代理）
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cidr_network() {
+    local cidr="$1"
+    local ip="${cidr%/*}"
+    local prefix="${cidr#*/}"
+    local a b c d ip_int mask network
+
+    IFS=. read -r a b c d <<EOF
+$ip
+EOF
+    [ -n "$a" ] && [ -n "$b" ] && [ -n "$c" ] && [ -n "$d" ] && [ -n "$prefix" ] || return 1
+
+    ip_int=$(( (a << 24) + (b << 16) + (c << 8) + d ))
+    if [ "$prefix" -eq 0 ]; then
+        mask=0
+    else
+        mask=$(( (0xffffffff << (32 - prefix)) & 0xffffffff ))
+    fi
+    network=$(( ip_int & mask ))
+
+    printf "%d.%d.%d.%d/%d\n" \
+        $(( (network >> 24) & 255 )) \
+        $(( (network >> 16) & 255 )) \
+        $(( (network >> 8) & 255 )) \
+        $(( network & 255 )) \
+        "$prefix"
+}
+
+detect_local_subnet() {
+    local iface cidr
+
+    iface="$(ip -4 route show default 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i == "dev") {print $(i+1); exit}}')"
+    if [ -z "$iface" ]; then
+        iface="$(ip -o -4 addr show scope global 2>/dev/null \
+            | awk '$2 !~ /^(lo|tailscale|easytier|zt|docker|br-|veth|warp)/ {print $2; exit}')"
+    fi
+    [ -n "$iface" ] || return 1
+
+    cidr="$(ip -o -4 addr show dev "$iface" scope global 2>/dev/null | awk '{print $4; exit}')"
+    [ -n "$cidr" ] || return 1
+
+    cidr_network "$cidr"
+}
+
+ensure_ufw_before_input_rule() {
+    local rule="$1"
+    local file="/etc/ufw/before.rules"
+    local tmp
+
+    [ -f "$file" ] || return 0
+    grep -Fxq -- "$rule" "$file" && return 0
+
+    if grep -q '^COMMIT$' "$file"; then
+        tmp="$(mktemp)"
+        awk -v rule="$rule" '
+            !inserted && $0 == "COMMIT" {
+                print rule
+                inserted = 1
+            }
+            { print }
+        ' "$file" > "$tmp"
+        cat "$tmp" > "$file"
+        rm -f "$tmp"
+    else
+        printf '%s\n' "$rule" >> "$file"
+    fi
+}
+
+MIHOMO_LAN="$(detect_local_subnet || true)"
+MIHOMO_MARK="0x1ed4"
+
+echo "配置 Mihomo TProxy 入站放行..."
+ensure_ufw_before_input_rule "-A ufw-before-input -m mark --mark ${MIHOMO_MARK} -j ACCEPT"
+if [ -n "$MIHOMO_LAN" ]; then
+    ufw allow proto tcp from "$MIHOMO_LAN" to any port 1053 comment 'Mihomo DNS TCP - LAN'
+    ufw allow proto udp from "$MIHOMO_LAN" to any port 1053 comment 'Mihomo DNS UDP - LAN'
+else
+    echo "  未检测到本机 IPv4 网段，跳过 Mihomo IPv4 入站放行"
+fi
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # EasyTier（纯客户端模式，无 --listeners）
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 问题：EasyTier 发出 UDP 时源端口随机（如 43232→relay:11010），
@@ -172,6 +254,7 @@ echo ""
 echo "📋 开放的端口："
 echo "  - SSH (22): 本地网络 + Tailscale"
 echo "  - Node Exporter (9100): 仅 Tailscale"
+echo "  - Mihomo TProxy mark (${MIHOMO_MARK}) / DNS (1053): ${MIHOMO_LAN}"
 echo "  - 出站: DNS, NTP, HTTPS, CF Tunnel(7844,443), CF WARP(2408,1701), Tailscale, FRP($FRP_PORT)"
 echo ""
 echo "🔐 安全特性："
