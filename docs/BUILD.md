@@ -204,7 +204,7 @@ echo "所有 SD 卡烧录完成"
 | 组件 | 版本/说明 |
 |------|-----------|
 | Debian | trixie (Debian 13) |
-| Kernel | Rockchip vendor kernel（优化版） |
+| Kernel | Rockchip current kernel（优化版） |
 | nginx | 反向代理（监听 10077，WebSocket → xray） |
 | xray | 最新 arm64 版（WebSocket 转发，监听 10079） |
 | cloudflared | 最新 arm64 版 |
@@ -271,7 +271,7 @@ rsync -a armbian-build/userpatches/ armbian-build/build/userpatches/
 
 # 重跑 customize-image 阶段（Armbian 支持 --skip-kernel）
 cd armbian-build/build
-./compile.sh build BOARD=nanopi-zero2 BRANCH=vendor RELEASE=trixie \
+./compile.sh build BOARD=nanopi-zero2 BRANCH=current RELEASE=trixie \
     SKIP_EXTERNAL_TOOLCHAINS=yes \
     COMPRESS_OUTPUTIMAGE=yes
 ```
